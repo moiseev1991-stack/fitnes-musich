@@ -1,0 +1,88 @@
+// Prisma schema for Fitness Workout Diary
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sessions         WorkoutSession[]
+  customExercises  Exercise[]        @relation("CustomExercises")
+}
+
+model MuscleGroup {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  exerciseMuscleGroups ExerciseMuscleGroup[]
+}
+
+model Exercise {
+  id        String   @id @default(uuid())
+  name      String
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user             User?               @relation("CustomExercises", fields: [userId], references: [id], onDelete: Cascade)
+  exerciseMuscleGroups ExerciseMuscleGroup[]
+  sessionExercises   SessionExercise[]
+}
+
+model ExerciseMuscleGroup {
+  exerciseId    String @map("exercise_id")
+  muscleGroupId Int    @map("muscle_group_id")
+
+  exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscleGroup MuscleGroup @relation(fields: [muscleGroupId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscleGroupId])
+}
+
+model WorkoutSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  title     String?
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionExercises SessionExercise[]
+
+  @@unique([userId, date])
+}
+
+model SessionExercise {
+  id           String  @id @default(uuid())
+  sessionId    String  @map("session_id")
+  exerciseId   String  @map("exercise_id")
+  plannedSets  Int     @map("planned_sets")
+  orderIndex   Int     @default(0) @map("order_index")
+
+  session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets     Set[]
+
+  @@index([sessionId])
+}
+
+model Set {
+  id                 String   @id @default(uuid())
+  sessionExerciseId  String   @map("session_exercise_id")
+  weight             Float
+  reps               Int
+  note               String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+}
