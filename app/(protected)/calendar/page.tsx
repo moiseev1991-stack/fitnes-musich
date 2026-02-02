@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import type { SessionData } from "@/components/calendar/WorkoutPanel";
 
-export default function CalendarPage() {
+function CalendarPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -213,5 +213,19 @@ export default function CalendarPage() {
         </div>
       )}
     </MobileLayout>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense
+      fallback={
+        <MobileLayout title="Календарь">
+          <div className="py-8 text-center text-slate-500">Загрузка…</div>
+        </MobileLayout>
+      }
+    >
+      <CalendarPageContent />
+    </Suspense>
   );
 }
