@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Дневник тренировок (Fitness Diary)
 
-## Getting Started
+Веб-приложение для планирования тренировок, ввода подходов и отслеживания прогресса.
 
-First, run the development server:
+## Стек
+
+- **Next.js 16** + React 19
+- **PostgreSQL** + Prisma ORM
+- **Tailwind CSS**
+- **TypeScript**
+
+## Требования
+
+- Node.js LTS
+- Docker + Docker Compose (для локальной БД)
+
+## Локальный запуск
+
+### 1. Переменные окружения
+
+```bash
+cp .env.example .env
+# Отредактируйте .env при необходимости
+```
+
+### 2. Запуск PostgreSQL
+
+```bash
+docker compose -f docker/docker-compose.local.yml up -d
+```
+
+### 3. Миграции и seed
+
+```bash
+npm install
+npx prisma generate
+npx prisma migrate dev --name init
+npm run db:seed
+```
+
+### 4. Запуск приложения
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Тестовые учётные данные
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Email: `test@fitness.app`
+- Пароль: `test12345`
 
-## Learn More
+## Деплой на production
 
-To learn more about Next.js, take a look at the following resources:
+### 1. Подготовка
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Установите Docker на VPS (Ubuntu)
+- Создайте `.env.prod`:
+  - `DATABASE_URL` — строка подключения к Postgres
+  - `AUTH_SECRET` — случайная строка (32+ символов)
+  - `POSTGRES_PASSWORD` — пароль для БД
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Запуск
 
-## Deploy on Vercel
+```bash
+git clone <repo>
+cd fitnes
+docker compose -f docker/docker-compose.prod.yml up -d
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Миграции
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker compose -f docker/docker-compose.prod.yml exec app npx prisma migrate deploy
+docker compose -f docker/docker-compose.prod.yml exec app npm run db:seed
+```
+
+### 4. Reverse proxy и SSL
+
+Настройте Caddy или nginx перед контейнером `app` (порт 3000).
+
+## Бэкапы
+
+Рекомендуется настроить ежедневный `pg_dump` через cron:
+
+```bash
+./scripts/backup-db.sh /path/to/backups
+```
+
+Хранить 7–14 дней, проверять восстановление раз в месяц.
+
+## Структура проекта
+
+```
+app/
+  (auth)/login/         # Страница входа
+  (protected)/          # Защищённые страницы
+    calendar/           # Календарь тренировок
+    history/            # История тренировок
+    progress/           # Графики прогресса
+    session/[id]/       # Экран тренировки
+  api/                  # API-роуты
+components/
+lib/
+prisma/
+  schema.prisma
+  seed.ts
+docker/
+```
+
+## Лицензия
+
+MIT

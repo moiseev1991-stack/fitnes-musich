@@ -1,4 +1,5 @@
 // Prisma schema for Fitness Workout Diary
+// SQLite for local dev (file:./prisma/dev.db), PostgreSQL for production (e.g. Render)
 generator client {
   provider = "prisma-client-js"
 }
@@ -49,7 +50,7 @@ model ExerciseMuscleGroup {
 model WorkoutSession {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  date      DateTime @db.Date
+  date      DateTime
   title     String?
   note      String?
   createdAt DateTime @default(now()) @map("created_at")
@@ -62,11 +63,13 @@ model WorkoutSession {
 }
 
 model SessionExercise {
-  id           String  @id @default(uuid())
-  sessionId    String  @map("session_id")
-  exerciseId   String  @map("exercise_id")
-  plannedSets  Int     @map("planned_sets")
-  orderIndex   Int     @default(0) @map("order_index")
+  id                String   @id @default(uuid())
+  sessionId         String   @map("session_id")
+  exerciseId        String   @map("exercise_id")
+  plannedSets       Int      @map("planned_sets")
+  orderIndex        Int      @default(0) @map("order_index")
+  supersetGroupId   String?  @map("superset_group_id")
+  supersetOrder     Int?     @map("superset_order") // 1 or 2
 
   session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
@@ -78,9 +81,11 @@ model SessionExercise {
 model Set {
   id                 String   @id @default(uuid())
   sessionExerciseId  String   @map("session_exercise_id")
-  weight             Float
+  weight             Float?
   reps               Int
   note               String?
+  valueType          String?  @default("reps") @map("value_type") // "reps" | "time"
+  status             String?  // "done" | "missed" | null
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
