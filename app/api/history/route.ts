@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { formatDateToUTC } from "@/lib/dateUtils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       sessions: sessions.map((s) => ({
         id: s.id,
-        date: s.date,
+        date: formatDateToUTC(s.date),
         title: s.title,
         exercisesCount: s._count.sessionExercises,
       })),

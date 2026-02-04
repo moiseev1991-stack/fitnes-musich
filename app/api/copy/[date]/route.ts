@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { isValidDateOnly, parseDateOnly } from "@/lib/dateUtils";
 
 export async function POST(
   _request: NextRequest,
@@ -10,14 +11,14 @@ export async function POST(
     const { userId } = await requireAuth();
     const { date } = await params;
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!isValidDateOnly(date)) {
       return NextResponse.json(
-        { error: "Некорректная дата" },
+        { error: "Некорректная дата (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
 
-    const targetDate = new Date(date);
+    const targetDate = parseDateOnly(date);
 
     const existing = await prisma.workoutSession.findFirst({
       where: { userId, date: targetDate },

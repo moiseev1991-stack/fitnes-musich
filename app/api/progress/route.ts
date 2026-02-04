@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { formatDateToUTC } from "@/lib/dateUtils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
         return Math.max(best, rm);
       }, 0);
       return {
-        date: s.date.toISOString().split("T")[0],
+        date: formatDateToUTC(s.date),
         maxWeight,
         max1RM: Math.round(max1RM * 10) / 10,
       };

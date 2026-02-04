@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { ensureSessionBelongsToUser } from "@/lib/permissions";
+import { isValidDateOnly, parseDateOnly, formatDateToUTC } from "@/lib/dateUtils";
 
 export async function POST(
   request: NextRequest,
@@ -17,15 +18,18 @@ export async function POST(
     const targetDate = body.targetDate as string | undefined;
     const overwrite = Boolean(body.overwrite);
 
-    if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+    if (!targetDate || !isValidDateOnly(targetDate)) {
       return NextResponse.json(
         { error: "Некорректная дата targetDate (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
 
-    // Одна и та же календарная дата в любой TZ: YYYY-MM-DD → UTC midnight
-    const target = new Date(`${targetDate}T00:00:00.000Z`);
+    const target = parseDateOnly(targetDate);
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[clone] sourceWorkoutId=%s targetDate=%s overwrite=%s", sourceId, targetDate, overwrite);
+    }
 
     const existing = await prisma.workoutSession.findFirst({
       where: { userId, date: target },
@@ -64,6 +68,10 @@ export async function POST(
       );
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[clone] source date from DB:", formatDateToUTC(source.date), "→ target:", targetDate);
+    }
+
     const newSession = await prisma.workoutSession.create({
       data: {
         userId,
@@ -99,7 +107,7 @@ export async function POST(
     return NextResponse.json({
       session: {
         id: newSession.id,
-        date: newSession.date.toISOString().slice(0, 10),
+        date: formatDateToUTC(newSession.date),
       },
     });
   } catch (e) {

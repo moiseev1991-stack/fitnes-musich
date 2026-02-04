@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { createSessionSchema } from "@/lib/validators";
+import { isValidDateOnly, parseDateOnly, formatDateToUTC } from "@/lib/dateUtils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,19 +11,22 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    if (!from || !to) {
+    if (!from || !to || !isValidDateOnly(from) || !isValidDateOnly(to)) {
       return NextResponse.json(
-        { error: "Параметры from и to обязательны" },
+        { error: "Параметры from и to обязательны (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
+
+    const fromDate = parseDateOnly(from);
+    const toDate = parseDateOnly(to);
 
     const sessions = await prisma.workoutSession.findMany({
       where: {
         userId,
         date: {
-          gte: new Date(from),
-          lte: new Date(to),
+          gte: fromDate,
+          lte: toDate,
         },
       },
       orderBy: { date: "desc" },
@@ -33,12 +37,22 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ sessions });
+    return NextResponse.json({
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        date: formatDateToUTC(s.date),
+        title: s.title,
+      })),
+    });
   } catch (e) {
     if ((e as Error).message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
-    throw e;
+    console.error("GET /api/sessions", e);
+    return NextResponse.json(
+      { error: "Ошибка сервера. Проверьте подключение к базе данных." },
+      { status: 500 }
+    );
   }
 }
 
@@ -56,8 +70,10 @@ export async function POST(request: NextRequest) {
 
     const { date, title } = parsed.data;
 
+    const targetDate = parseDateOnly(date);
+
     const existing = await prisma.workoutSession.findFirst({
-      where: { userId, date: new Date(date) },
+      where: { userId, date: targetDate },
     });
     if (existing) {
       return NextResponse.json(
@@ -69,7 +85,7 @@ export async function POST(request: NextRequest) {
     const session = await prisma.workoutSession.create({
       data: {
         userId,
-        date: new Date(date),
+        date: targetDate,
         title: title ?? null,
       },
     });
@@ -79,6 +95,10 @@ export async function POST(request: NextRequest) {
     if ((e as Error).message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
-    throw e;
+    console.error("POST /api/sessions", e);
+    return NextResponse.json(
+      { error: "Ошибка сервера. Проверьте подключение к базе данных." },
+      { status: 500 }
+    );
   }
 }

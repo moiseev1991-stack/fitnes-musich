@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { formatValueForDisplay, parseNote } from "@/lib/setType";
 
 const STATUS_ICON_SIZE = 16;
@@ -101,8 +101,30 @@ export function WorkoutTable({
 
   const [displaySetCount, setDisplaySetCount] = useState(initialDisplayCount);
   const [showHiddenColumnsHint, setShowHiddenColumnsHint] = useState(false);
+  const [fullNameModal, setFullNameModal] = useState<string | null>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isExecute = mode === "execute";
   const showEditControls = !isExecute;
+
+  const updateCanScrollRight = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    updateCanScrollRight();
+    el.addEventListener("scroll", updateCanScrollRight);
+    const ro = new ResizeObserver(updateCanScrollRight);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateCanScrollRight);
+      ro.disconnect();
+    };
+  }, [updateCanScrollRight, displaySetCount]);
 
   const handleDecreaseSetCount = () => {
     if (displaySetCount <= 1) return;
@@ -179,8 +201,15 @@ export function WorkoutTable({
     );
   }
 
+  const scrollToLastSet = () => {
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 -mx-1">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 -mx-1 overflow-hidden">
       {showEditControls && (
         <>
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
@@ -253,32 +282,43 @@ export function WorkoutTable({
           </span>
         </div>
       )}
-      <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-        <table className="w-full text-sm min-w-[320px]">
-          <thead className="sticky top-0 z-20">
-            <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-              <th className="w-28 sm:w-36 px-2 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 sticky left-0 bg-slate-50 dark:bg-slate-800/50 z-10">
-              Упражнение
-            </th>
-            {Array.from({ length: displaySetCount }, (_, i) => (
-              <th
-                key={i}
-                className="min-w-[64px] px-1 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400"
-                title={`Подход ${i + 1}`}
-              >
-                П{i + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
+      <div className="relative max-h-[60vh] overflow-y-auto">
+        <div
+          ref={scrollContainerRef}
+          className="overflow-x-auto overflow-y-hidden [overflow-scrolling:touch] max-w-full"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <table className="w-full text-sm border-collapse">
+            <thead className="sticky top-0 z-20">
+              <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <th
+                  className="min-w-[160px] w-[180px] max-w-[210px] px-2 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 sticky left-0 z-20 bg-slate-50 dark:bg-slate-800/50 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-2px_rgba(0,0,0,0.3)]"
+                  scope="col"
+                >
+                  Упражнение
+                </th>
+                {Array.from({ length: displaySetCount }, (_, i) => (
+                  <th
+                    key={i}
+                    className="min-w-[72px] w-[76px] max-w-[84px] px-1 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400"
+                    title={`Подход ${i + 1}`}
+                  >
+                    П{i + 1}
+                  </th>
+                ))}
+              </tr>
+            </thead>
         <tbody>
           {rows.map(({ ex, supersetLabel }) => (
             <tr
               key={ex.id}
               className="border-b border-slate-100 dark:border-slate-800 last:border-0"
             >
-              <td className="px-2 py-2 font-medium text-slate-900 dark:text-slate-100 sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between gap-1">
+              <td
+                className="min-w-[160px] w-[180px] max-w-[210px] px-2 py-2 font-medium text-slate-900 dark:text-slate-100 sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-2px_rgba(0,0,0,0.3)] border-r border-slate-200 dark:border-slate-700 align-top"
+                style={{ breakInside: "avoid" }}
+              >
+                <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0 flex-1">
                     {supersetLabel && (
                       <span
@@ -288,18 +328,46 @@ export function WorkoutTable({
                         {supersetLabel.replace(/\d+$/, "")}
                       </span>
                     )}
-                    <span className="block truncate">{ex.name}</span>
-                    <span className="block text-xs text-slate-500 font-normal">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullNameModal(ex.name);
+                      }}
+                      className="text-left w-full group flex items-start gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                      title="Показать полное название"
+                    >
+                      <span
+                        className="block min-w-0 line-clamp-2 break-words"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {ex.name}
+                      </span>
+                      <span
+                        className="shrink-0 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 text-sm leading-tight"
+                        aria-hidden
+                      >
+                        ℹ︎
+                      </span>
+                    </button>
+                    <span className="block text-xs text-slate-500 font-normal mt-0.5">
                       {ex.sets.length}/{ex.plannedSets}
                     </span>
                   </div>
                   {showEditControls && (
                     <button
                       type="button"
-                      onClick={() =>
-                        confirm("Удалить упражнение и все его подходы?") &&
-                        onDeleteExercise(ex.id, ex.name)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("Удалить упражнение и все его подходы?")) {
+                          onDeleteExercise(ex.id, ex.name);
+                        }
+                      }}
                       className="shrink-0 min-w-[36px] min-h-[36px] p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600"
                       aria-label="Удалить упражнение"
                       title="Удалить упражнение"
@@ -331,7 +399,7 @@ export function WorkoutTable({
                   <td
                     key={i}
                     onClick={() => handleCellClick(ex.id, set, ex.name)}
-                    className={`min-w-[64px] px-1 py-1.5 text-center border-r border-slate-50 dark:border-slate-800/50 last:border-r-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800 min-h-[44px] align-top relative ${statusClass}`}
+                    className={`min-w-[72px] w-[76px] max-w-[84px] px-1 py-1.5 text-center border-r border-slate-50 dark:border-slate-800/50 last:border-r-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800 min-h-[44px] align-top relative ${statusClass}`}
                   >
                     {set ? (
                       <div className="flex flex-col items-center gap-0.5">
@@ -361,8 +429,53 @@ export function WorkoutTable({
             </tr>
           ))}
         </tbody>
-      </table>
+          </table>
+        </div>
+        {canScrollRight && (
+          <div
+            className="pointer-events-none absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-slate-100/90 dark:from-slate-800/90 to-transparent z-[5]"
+            aria-hidden
+          />
+        )}
+        {displaySetCount > 3 && (
+          <button
+            type="button"
+            onClick={scrollToLastSet}
+            className="absolute right-2 top-14 z-[6] min-h-[32px] px-2 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+            title="К последнему подходу"
+          >
+            → П{displaySetCount}
+          </button>
+        )}
       </div>
+      {fullNameModal !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50"
+          onClick={() => setFullNameModal(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="full-name-title"
+        >
+          <div
+            className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="full-name-title" className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
+              Упражнение
+            </h2>
+            <p className="text-slate-900 dark:text-slate-100 break-words mb-4">
+              {fullNameModal}
+            </p>
+            <button
+              type="button"
+              onClick={() => setFullNameModal(null)}
+              className="w-full min-h-[44px] rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium hover:bg-slate-300 dark:hover:bg-slate-600"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
       {showEditControls && (
         <button
           type="button"

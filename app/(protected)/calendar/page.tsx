@@ -118,7 +118,7 @@ function CalendarPageContent() {
         }
       }
       if (!res.ok) {
-        showToast(data.error ?? "Ошибка");
+        showToast(data.error ?? "Ошибка сервера");
         return;
       }
       if (data.session?.id) {
@@ -150,7 +150,7 @@ function CalendarPageContent() {
         }
       }
       if (!res.ok) {
-        showToast(data.error ?? "Ошибка");
+        showToast(data.error ?? "Ошибка сервера");
         return;
       }
       if (data.session?.id) {

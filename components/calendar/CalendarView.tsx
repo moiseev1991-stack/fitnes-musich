@@ -95,7 +95,8 @@ export function CalendarView({
       .then((data) => {
         const map: Record<string, string> = {};
         for (const s of data.sessions ?? []) {
-          map[format(new Date(s.date), "yyyy-MM-dd")] = s.id;
+          // API возвращает date как YYYY-MM-DD (UTC), используем как ключ без парсинга
+          map[s.date] = s.id;
         }
         setSessionsIndex((prev) => ({ ...prev, ...map }));
       })

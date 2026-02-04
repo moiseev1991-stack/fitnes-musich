@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { isValidDateOnly, parseDateOnly, formatDateToUTC } from "@/lib/dateUtils";
 
 /** Диапазон для списка "скопировать тренировку": только до targetDate, не включая её */
 const RECENT_COPY_DAYS = 21;
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const daysParam = searchParams.get("days");
     const beforeParam = searchParams.get("before");
 
-    if (!beforeParam || !/^\d{4}-\d{2}-\d{2}$/.test(beforeParam)) {
+    if (!beforeParam || !isValidDateOnly(beforeParam)) {
       return NextResponse.json(
         { error: "Параметр before обязателен (YYYY-MM-DD)" },
         { status: 400 }
@@ -24,12 +25,11 @@ export async function GET(request: NextRequest) {
       Math.max(1, daysParam ? parseInt(daysParam, 10) : RECENT_COPY_DAYS),
       MAX_DAYS
     );
-    // Только до выбранной даты (не включая targetDate): [targetDate - days, targetDate), в UTC
-    const before = new Date(`${beforeParam}T00:00:00.000Z`);
+    const before = parseDateOnly(beforeParam);
     const from = new Date(before);
     from.setUTCDate(from.getUTCDate() - days);
 
-    // Все сессии в диапазоне — включая без упражнений и без подходов (sets не требуются)
+    // Все сессии в диапазоне — включая без упражнений и без подходов (без inner join на sets)
     const sessions = await prisma.workoutSession.findMany({
       where: {
         userId,
@@ -51,19 +51,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const list = sessions.map((s) => {
-      const preview = s.sessionExercises
-        .slice(0, 3)
-        .map((se) => se.exercise.name);
-      const d = s.date;
-      const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-      return {
-        id: s.id,
-        date: dateStr,
-        exerciseCount: s.sessionExercises.length,
-        preview,
-      };
-    });
+    const list = sessions.map((s) => ({
+      id: s.id,
+      date: formatDateToUTC(s.date),
+      exerciseCount: s.sessionExercises.length,
+      preview: s.sessionExercises.slice(0, 3).map((se) => se.exercise.name),
+    }));
 
     return NextResponse.json({ sessions: list });
   } catch (e) {
