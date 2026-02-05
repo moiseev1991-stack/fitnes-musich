@@ -154,24 +154,24 @@ export function CalendarView({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0 max-w-[55%]">
           <button
             type="button"
             onClick={handlePrev}
-            className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0"
             aria-label={
               calendarExpanded ? "Предыдущий месяц" : "Предыдущая неделя"
             }
           >
             ←
           </button>
-          <h2 className="text-lg font-semibold capitalize min-w-[160px]">
+          <h2 className="text-lg font-semibold capitalize min-w-0 truncate">
             {headerTitle}
           </h2>
           <button
             type="button"
             onClick={handleNext}
-            className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0"
             aria-label={
               calendarExpanded ? "Следующий месяц" : "Следующая неделя"
             }
@@ -182,7 +182,7 @@ export function CalendarView({
         <button
           type="button"
           onClick={() => setCalendarExpanded((e) => !e)}
-          className="shrink-0 min-h-[40px] px-3 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600"
+          className="shrink-0 min-h-[40px] w-[100px] rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 text-center"
           title={calendarExpanded ? "Свернуть" : "Развернуть"}
         >
           {calendarExpanded ? "Свернуть" : "Развернуть"}

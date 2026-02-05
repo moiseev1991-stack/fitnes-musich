@@ -265,7 +265,7 @@ export function WorkoutPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-          Тренировка на {format(selectedDate, "d MMMM yyyy", { locale: ru })}
+          Тренировка на {format(selectedDate, "dd.MM.yy")}
         </h3>
         <button
           type="button"

@@ -253,35 +253,6 @@ export function WorkoutTable({
           )}
         </>
       )}
-      {isExecute && (
-        <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-0.5">
-          <span className="text-sm font-medium text-slate-600 dark:text-slate-400 block">
-            Тап: сделал → не сделал → сброс
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-500 block flex flex-wrap items-center gap-x-1 gap-y-0.5">
-            <span className="inline-flex items-center gap-1">
-              <IconCheckCircle
-                size={STATUS_ICON_SIZE}
-                stroke={STATUS_ICON_STROKE}
-                className="shrink-0 text-emerald-600 dark:text-emerald-400 opacity-90"
-              />
-              Сделал
-            </span>
-            <span aria-hidden>·</span>
-            <span className="inline-flex items-center gap-1">
-              <IconXCircle
-                size={STATUS_ICON_SIZE}
-                stroke={STATUS_ICON_STROKE}
-                className="shrink-0 text-red-600 dark:text-red-400 opacity-90"
-              />
-              Не сделал
-            </span>
-            <span aria-hidden>·</span>
-            <span>— Нет статуса.</span>
-            <span>Отмечать можно только заполненные ячейки.</span>
-          </span>
-        </div>
-      )}
       <div className="relative max-h-[60vh] overflow-y-auto">
         <div
           ref={scrollContainerRef}
@@ -448,6 +419,35 @@ export function WorkoutTable({
           </button>
         )}
       </div>
+      {isExecute && (
+        <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-0.5">
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-400 block">
+            Тап: сделал → не сделал → сброс
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-500 block flex flex-wrap items-center gap-x-1 gap-y-0.5">
+            <span className="inline-flex items-center gap-1">
+              <IconCheckCircle
+                size={STATUS_ICON_SIZE}
+                stroke={STATUS_ICON_STROKE}
+                className="shrink-0 text-emerald-600 dark:text-emerald-400 opacity-90"
+              />
+              Сделал
+            </span>
+            <span aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1">
+              <IconXCircle
+                size={STATUS_ICON_SIZE}
+                stroke={STATUS_ICON_STROKE}
+                className="shrink-0 text-red-600 dark:text-red-400 opacity-90"
+              />
+              Не сделал
+            </span>
+            <span aria-hidden>·</span>
+            <span>— Нет статуса.</span>
+            <span>Отмечать можно только заполненные ячейки.</span>
+          </span>
+        </div>
+      )}
       {fullNameModal !== null && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50"
