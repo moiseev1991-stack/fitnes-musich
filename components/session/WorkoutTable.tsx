@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { formatValueForDisplay, parseNote } from "@/lib/setType";
+import { parseNote } from "@/lib/setType";
+import { WorkoutCell } from "./WorkoutCell";
 
-const STATUS_ICON_SIZE = 16;
-const STATUS_ICON_STROKE = 2;
+const HINT_ICON_SIZE = 16;
+const HINT_ICON_STROKE = 2;
 
 function IconCheckCircle({ size = 16, stroke = 2, className = "" }: { size?: number; stroke?: number; className?: string }) {
   return (
@@ -59,14 +60,6 @@ interface WorkoutTableProps {
   onDeleteSession?: () => void;
 }
 
-function formatSetCell(set: SetData): string {
-  const val = formatValueForDisplay(set.reps, set.valueType ?? set.note);
-  if (set.weight != null && set.weight > 0) {
-    return `${set.weight}×${val}`;
-  }
-  return val;
-}
-
 function nextStatus(current: SetStatus): SetStatus {
   if (current === null) return "done";
   if (current === "done") return "missed";
@@ -75,9 +68,9 @@ function nextStatus(current: SetStatus): SetStatus {
 
 function statusBgClass(status: SetStatus): string {
   if (status === "done")
-    return "bg-emerald-500/30 dark:bg-emerald-600/40 text-emerald-800 dark:text-emerald-100";
+    return "bg-emerald-500/20 dark:bg-emerald-600/25 text-emerald-800 dark:text-emerald-200";
   if (status === "missed")
-    return "bg-red-500/30 dark:bg-red-600/40 text-red-800 dark:text-red-100";
+    return "bg-red-500/20 dark:bg-red-600/25 text-red-800 dark:text-red-200";
   return "";
 }
 
@@ -102,8 +95,11 @@ export function WorkoutTable({
   const [displaySetCount, setDisplaySetCount] = useState(initialDisplayCount);
   const [showHiddenColumnsHint, setShowHiddenColumnsHint] = useState(false);
   const [fullNameModal, setFullNameModal] = useState<string | null>(null);
+  const [noteViewText, setNoteViewText] = useState<string | null>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const hasNote = (set: SetData) => (parseNote(set.note).userNote ?? "").trim().length > 0;
   const isExecute = mode === "execute";
   const showEditControls = !isExecute;
 
@@ -212,10 +208,15 @@ export function WorkoutTable({
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 -mx-1 overflow-hidden">
       {showEditControls && (
         <>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Подходы
-            </span>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-wrap gap-1">
+            <div>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400 block">
+                Подходы
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Формат: повт/время × кг
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -349,51 +350,30 @@ export function WorkoutTable({
                 </div>
               </td>
               {Array.from({ length: displaySetCount }, (_, i) => {
-                const set = ex.sets[i];
+                const set = ex.sets[i] ?? null;
                 const status = (set?.status ?? null) as SetStatus;
                 const statusClass = set ? statusBgClass(status) : "";
-                const StatusIcon =
-                  status === "done" ? (
-                    <IconCheckCircle
-                      size={STATUS_ICON_SIZE}
-                      stroke={STATUS_ICON_STROKE}
-                      className="shrink-0 absolute top-0.5 right-0.5 text-current opacity-90"
-                    />
-                  ) : status === "missed" ? (
-                    <IconXCircle
-                      size={STATUS_ICON_SIZE}
-                      stroke={STATUS_ICON_STROKE}
-                      className="shrink-0 absolute top-0.5 right-0.5 text-current opacity-90"
-                    />
-                  ) : null;
                 return (
                   <td
                     key={i}
-                    onClick={() => handleCellClick(ex.id, set, ex.name)}
-                    className={`min-w-[72px] w-[76px] max-w-[84px] px-1 py-1.5 text-center border-r border-slate-50 dark:border-slate-800/50 last:border-r-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800 min-h-[44px] align-top relative ${statusClass}`}
+                    onClick={() => handleCellClick(ex.id, set ?? undefined, ex.name)}
+                    className={`min-w-[72px] w-[76px] max-w-[84px] border-r border-slate-50 dark:border-slate-800/50 last:border-r-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800 min-h-[52px] align-top relative ${statusClass}`}
                   >
-                    {set ? (
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span
-                          className={`font-medium ${statusClass ? "text-inherit" : "text-slate-900 dark:text-slate-100"}`}
-                        >
-                          {formatSetCell(set)}
-                        </span>
-                        {StatusIcon}
-                        {!isExecute && parseNote(set.note).userNote && (
-                          <span
-                            className="text-amber-500 text-[10px]"
-                            title={parseNote(set.note).userNote}
-                          >
-                            📝
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 dark:text-slate-500">
-                        —
-                      </span>
-                    )}
+                    <WorkoutCell
+                      set={set}
+                      status={status}
+                      statusClass={statusClass}
+                      isExecute={isExecute}
+                      hasNote={set ? hasNote(set) : false}
+                      onNoteClick={() => {
+                        if (!set) return;
+                        if (isExecute) {
+                          setNoteViewText(parseNote(set.note).userNote);
+                        } else {
+                          onCellClick?.(ex.id, set, ex.name);
+                        }
+                      }}
+                    />
                   </td>
                 );
               })}
@@ -424,11 +404,14 @@ export function WorkoutTable({
           <span className="text-sm font-medium text-slate-600 dark:text-slate-400 block">
             Тап: сделал → не сделал → сброс
           </span>
+          <span className="text-xs text-slate-500 dark:text-slate-500 block">
+            Значение: (повт или время) × кг
+          </span>
           <span className="text-xs text-slate-500 dark:text-slate-500 block flex flex-wrap items-center gap-x-1 gap-y-0.5">
             <span className="inline-flex items-center gap-1">
               <IconCheckCircle
-                size={STATUS_ICON_SIZE}
-                stroke={STATUS_ICON_STROKE}
+                size={HINT_ICON_SIZE}
+                stroke={HINT_ICON_STROKE}
                 className="shrink-0 text-emerald-600 dark:text-emerald-400 opacity-90"
               />
               Сделал
@@ -436,8 +419,8 @@ export function WorkoutTable({
             <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
               <IconXCircle
-                size={STATUS_ICON_SIZE}
-                stroke={STATUS_ICON_STROKE}
+                size={HINT_ICON_SIZE}
+                stroke={HINT_ICON_STROKE}
                 className="shrink-0 text-red-600 dark:text-red-400 opacity-90"
               />
               Не сделал
@@ -445,6 +428,10 @@ export function WorkoutTable({
             <span aria-hidden>·</span>
             <span>— Нет статуса.</span>
             <span>Отмечать можно только заполненные ячейки.</span>
+            <span className="inline-flex items-center gap-1 mt-1 block">
+              <span aria-hidden>📝</span>
+              Заметка к подходу — тап по иконке для просмотра.
+            </span>
           </span>
         </div>
       )}
@@ -469,6 +456,34 @@ export function WorkoutTable({
             <button
               type="button"
               onClick={() => setFullNameModal(null)}
+              className="w-full min-h-[44px] rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium hover:bg-slate-300 dark:hover:bg-slate-600"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
+      {noteViewText !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50"
+          onClick={() => setNoteViewText(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="note-view-title"
+        >
+          <div
+            className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="note-view-title" className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
+              Заметка
+            </h2>
+            <p className="text-slate-900 dark:text-slate-100 break-words mb-4 whitespace-pre-wrap">
+              {noteViewText}
+            </p>
+            <button
+              type="button"
+              onClick={() => setNoteViewText(null)}
               className="w-full min-h-[44px] rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium hover:bg-slate-300 dark:hover:bg-slate-600"
             >
               Закрыть

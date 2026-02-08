@@ -34,7 +34,7 @@ export function getValueType(
   return type;
 }
 
-/** Format value for display: reps as number, time as 45с or 1:30 */
+/** Format value for display: reps as number, time as 45с or 1:00 */
 export function formatValueForDisplay(
   value: number,
   noteOrValueType: string | null | undefined
@@ -50,4 +50,48 @@ export function formatValueForDisplay(
     return s === 0 ? `${m}:00` : `${m}:${s.toString().padStart(2, "0")}`;
   }
   return String(value);
+}
+
+/** Две строки для ячейки: повторы/время отдельно, вес (кг) отдельно — сразу понятно */
+export function getSetCellLines(set: {
+  reps: number;
+  weight: number | null;
+  valueType?: string | null;
+  note?: string | null;
+}): { repsLine: string; weightLine: string | null } {
+  const type = getValueType(set.valueType ?? undefined, set.note ?? null);
+  const valStr = formatValueForDisplay(set.reps, type);
+  const repsLine = type === "reps" ? `${valStr} повт` : valStr;
+  const hasWeight = set.weight != null && set.weight > 0;
+  const weightLine = hasWeight ? `${set.weight} кг` : null;
+  return { repsLine, weightLine };
+}
+
+/** Разбивка для ячейки: строка1 число × вес, строка2 подписи (повт/с/мин | кг) */
+export function getSetCellColumns(set: {
+  reps: number;
+  weight: number | null;
+  valueType?: string | null;
+  note?: string | null;
+}): {
+  mainNumber: string;
+  mainLabel: string;
+  weightNumber: number | null;
+  showSeparator: boolean;
+} {
+  const type = getValueType(set.valueType ?? undefined, set.note ?? null);
+  const hasWeight = set.weight != null && set.weight > 0;
+  const weightNumber = hasWeight ? set.weight : null;
+  const showSeparator = hasWeight;
+
+  if (type === "reps") {
+    return { mainNumber: String(set.reps), mainLabel: "повт", weightNumber, showSeparator };
+  }
+  if (set.reps < 60) {
+    return { mainNumber: String(set.reps), mainLabel: "с", weightNumber, showSeparator };
+  }
+  const m = Math.floor(set.reps / 60);
+  const s = set.reps % 60;
+  const mainNumber = s === 0 ? `${m}:00` : `${m}:${s.toString().padStart(2, "0")}`;
+  return { mainNumber, mainLabel: "мин", weightNumber, showSeparator };
 }
