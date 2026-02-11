@@ -33,7 +33,7 @@ export async function POST(
     const lastSession = await prisma.workoutSession.findFirst({
       where: {
         userId,
-        date: { lt: targetDate },
+        date: { lt: targetDate, not: null },
       },
       orderBy: { date: "desc" },
       include: {

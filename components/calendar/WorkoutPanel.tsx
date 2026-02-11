@@ -7,6 +7,7 @@ import { WorkoutTable, type SetData } from "@/components/session/WorkoutTable";
 import { ExercisePicker } from "@/components/exercises/ExercisePicker";
 import { SetFormModal } from "@/components/session/SetFormModal";
 import { CopySessionModal } from "./CopySessionModal";
+import { ApplyTemplateModal } from "./ApplyTemplateModal";
 
 export interface SessionExerciseData {
   id: string;
@@ -59,6 +60,7 @@ export function WorkoutPanel({
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const [showPicker, setShowPicker] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [formFor, setFormFor] = useState<{
     sessionExerciseId: string;
@@ -190,6 +192,43 @@ export function WorkoutPanel({
     showToast("Сначала внесите значение подхода");
   };
 
+  const handleSupersetCreate = async (sessionExerciseIds: string[]) => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/superset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionExerciseIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error ?? "Ошибка при создании суперсета");
+        return;
+      }
+      onRefreshSession(sessionId);
+    } catch {
+      showToast("Ошибка сети");
+    }
+  };
+
+  const handleSupersetUngroup = async (supersetGroupId: string) => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/superset/ungroup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supersetGroupId }),
+      });
+      if (!res.ok) {
+        showToast("Ошибка при разъединении");
+        return;
+      }
+      onRefreshSession(sessionId);
+    } catch {
+      showToast("Ошибка сети");
+    }
+  };
+
   if (!sessionId) {
     return (
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-6 space-y-4">
@@ -206,10 +245,17 @@ export function WorkoutPanel({
           </button>
           <button
             type="button"
+            onClick={() => setShowApplyTemplateModal(true)}
+            className="min-h-[44px] px-4 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            Выбрать из базы
+          </button>
+          <button
+            type="button"
             onClick={() => setShowCopyModal(true)}
             className="min-h-[44px] px-4 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            Скопировать тренировку
+            Скопировать последнюю
           </button>
           {showCopyModal && (
             <CopySessionModal
@@ -220,6 +266,22 @@ export function WorkoutPanel({
                 setShowCopyModal(false);
               }}
               showToast={showToast}
+            />
+          )}
+          {showApplyTemplateModal && (
+            <ApplyTemplateModal
+              targetDate={dateStr}
+              targetDateLabel={format(selectedDate, "dd.MM.yyyy")}
+              onClose={() => setShowApplyTemplateModal(false)}
+              onSuccess={(sessionId) => {
+                onCopySessionSuccess?.(sessionId);
+                setShowApplyTemplateModal(false);
+              }}
+              showToast={showToast}
+              onEmptyCreate={() => {
+                setShowApplyTemplateModal(false);
+                onCreateSession(dateStr);
+              }}
             />
           )}
         </div>
@@ -304,11 +366,14 @@ export function WorkoutPanel({
       <WorkoutTable
         mode={mode}
         exercises={exercises}
+        sessionId={sessionId}
         onCellClick={handleCellClick}
         onStatusToggle={handleStatusToggle}
         onEmptyCellClick={handleEmptyCellClick}
         onDeleteExercise={handleDeleteExercise}
         onAddExercise={() => setShowPicker(true)}
+        onSupersetCreate={handleSupersetCreate}
+        onSupersetUngroup={handleSupersetUngroup}
       />
 
       {showPicker && (

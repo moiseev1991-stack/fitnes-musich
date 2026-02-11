@@ -20,13 +20,14 @@ interface SessionExerciseData {
 
 interface SessionData {
   id: string;
-  date: string;
+  date: string | null;
   title: string | null;
   sessionExercises: SessionExerciseData[];
 }
 
 interface SessionEditorProps {
   session: SessionData;
+  isTemplate?: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onSessionDeleted?: (dateStr: string) => void;
@@ -35,6 +36,7 @@ interface SessionEditorProps {
 
 export function SessionEditor({
   session,
+  isTemplate = false,
   onBack,
   onRefresh,
   onSessionDeleted,
@@ -160,6 +162,41 @@ export function SessionEditor({
     showToast("Сначала внесите значение подхода");
   };
 
+  const handleSupersetCreate = async (sessionExerciseIds: string[]) => {
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/superset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionExerciseIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error ?? "Ошибка при создании суперсета");
+        return;
+      }
+      onRefresh();
+    } catch {
+      showToast("Ошибка сети");
+    }
+  };
+
+  const handleSupersetUngroup = async (supersetGroupId: string) => {
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/superset/ungroup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supersetGroupId }),
+      });
+      if (!res.ok) {
+        showToast("Ошибка при разъединении");
+        return;
+      }
+      onRefresh();
+    } catch {
+      showToast("Ошибка сети");
+    }
+  };
+
   const handleDeleteSession = async () => {
     setDeleteLoading(true);
     try {
@@ -173,7 +210,7 @@ export function SessionEditor({
         return;
       }
       setShowDeleteConfirm(false);
-      const dateStr = format(new Date(session.date), "yyyy-MM-dd");
+      const dateStr = session.date ? format(new Date(session.date), "yyyy-MM-dd") : "";
       onSessionDeleted?.(dateStr);
     } catch {
       showToast("Не удалось удалить тренировку. Попробуйте ещё раз.");
@@ -210,7 +247,9 @@ export function SessionEditor({
         </button>
         <h2 className="font-semibold text-sm sm:text-base truncate max-w-[calc(100%-60px)]">
           {session.title ||
-            format(new Date(session.date), "d MMM yyyy", { locale: ru })}{" "}
+            (session.date
+              ? format(new Date(session.date), "d MMM yyyy", { locale: ru })
+              : "Тренировка без названия")}{" "}
           — {session.sessionExercises.length} упр.
         </h2>
       </div>
@@ -241,8 +280,9 @@ export function SessionEditor({
       </div>
 
       <WorkoutTable
-        mode={mode}
+        mode={isTemplate ? "edit" : mode}
         exercises={exercises}
+        sessionId={session.id}
         onCellClick={handleCellClick}
         onStatusToggle={handleStatusToggle}
         onEmptyCellClick={handleEmptyCellClick}
@@ -253,6 +293,9 @@ export function SessionEditor({
             ? () => setShowDeleteConfirm(true)
             : undefined
         }
+        onSupersetCreate={handleSupersetCreate}
+        onSupersetUngroup={handleSupersetUngroup}
+        isTemplate={isTemplate}
       />
 
       {showPicker && (

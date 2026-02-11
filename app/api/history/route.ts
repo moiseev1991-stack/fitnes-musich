@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Number(searchParams.get("limit")) || 50, 100);
 
     const sessions = await prisma.workoutSession.findMany({
-      where: { userId },
+      where: { userId, date: { not: null } },
       orderBy: { date: "desc" },
       take: limit,
       select: {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       sessions: sessions.map((s) => ({
         id: s.id,
-        date: formatDateToUTC(s.date),
+        date: s.date ? formatDateToUTC(s.date) : "",
         title: s.title,
         exercisesCount: s._count.sessionExercises,
       })),

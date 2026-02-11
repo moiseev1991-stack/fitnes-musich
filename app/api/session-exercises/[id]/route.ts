@@ -2,19 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 
-async function ensureSessionExerciseBelongsToUser(
-  sessionExerciseId: string,
-  userId: string
-) {
-  const se = await prisma.sessionExercise.findFirst({
-    where: {
-      id: sessionExerciseId,
-      session: { userId },
-    },
-  });
-  if (!se) throw new Error("NOT_FOUND");
-}
-
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,11 +10,27 @@ export async function DELETE(
     const { userId } = await requireAuth();
     const { id } = await params;
 
-    await ensureSessionExerciseBelongsToUser(id, userId);
+    const se = await prisma.sessionExercise.findFirst({
+      where: { id, session: { userId } },
+      select: { id: true, sessionId: true, supersetGroupId: true },
+    });
+    if (!se) throw new Error("NOT_FOUND");
 
     await prisma.sessionExercise.delete({
       where: { id },
     });
+
+    if (se.supersetGroupId) {
+      const leftInGroup = await prisma.sessionExercise.count({
+        where: { sessionId: se.sessionId, supersetGroupId: se.supersetGroupId },
+      });
+      if (leftInGroup === 1) {
+        await prisma.sessionExercise.updateMany({
+          where: { sessionId: se.sessionId, supersetGroupId: se.supersetGroupId },
+          data: { supersetGroupId: null, supersetOrder: null },
+        });
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (e) {

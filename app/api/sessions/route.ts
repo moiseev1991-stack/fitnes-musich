@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         date: {
+          not: null,
           gte: fromDate,
           lte: toDate,
         },

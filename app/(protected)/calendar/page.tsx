@@ -45,6 +45,11 @@ function CalendarPageContent() {
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const selectedSessionId = sessionsIndex[selectedDateStr] ?? null;
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
   const loadSelectedSession = useCallback(
     async (sessionId: string, forceRefresh = false) => {
       const cached = sessionCacheRef.current[sessionId];
@@ -62,7 +67,7 @@ function CalendarPageContent() {
           setSelectedSessionData(null);
           return;
         }
-        const data = JSON.parse(text) as { session?: SessionData };
+        const data = JSON.parse(text) as { session?: SessionData; error?: string };
         const s = data.session ?? null;
         if (s) {
           sessionCacheRef.current[sessionId] = s;
@@ -70,6 +75,9 @@ function CalendarPageContent() {
         } else {
           delete sessionCacheRef.current[sessionId];
           setSelectedSessionData(null);
+          if (!res.ok && data.error) {
+            showToast(data.error);
+          }
         }
       } catch {
         setSelectedSessionData(null);
@@ -77,7 +85,7 @@ function CalendarPageContent() {
         setSelectedSessionLoading(false);
       }
     },
-    []
+    [showToast]
   );
 
   useEffect(() => {
@@ -93,11 +101,6 @@ function CalendarPageContent() {
     }
     loadSelectedSession(selectedSessionId, true);
   }, [selectedSessionId, loadSelectedSession]);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const handleCreateSession = async (date: string) => {
     try {

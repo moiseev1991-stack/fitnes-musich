@@ -7,7 +7,7 @@ import { SessionEditor } from "@/components/session/SessionEditor";
 
 interface SessionData {
   id: string;
-  date: string;
+  date: string | null;
   title: string | null;
   sessionExercises: {
     id: string;
@@ -53,14 +53,18 @@ export default function SessionPage() {
     );
   }
 
+  const isTemplate = session.date === null;
+
   return (
     <MobileLayout>
       <SessionEditor
         session={session}
-        onBack={() => router.push("/calendar")}
+        isTemplate={isTemplate}
+        onBack={() => router.push(isTemplate ? "/templates" : "/calendar")}
         onRefresh={fetchSession}
         onSessionDeleted={(dateStr) => {
-          router.push(`/calendar?deleted=${dateStr}`);
+          if (isTemplate) router.push("/templates");
+          else if (dateStr) router.push(`/calendar?deleted=${dateStr}`);
         }}
       />
     </MobileLayout>

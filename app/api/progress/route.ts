@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const sessions = await prisma.workoutSession.findMany({
       where: {
         userId,
+        date: { not: null },
         sessionExercises: {
           some: { exerciseId },
         },

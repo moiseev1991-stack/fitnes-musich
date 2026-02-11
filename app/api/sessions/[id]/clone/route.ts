@@ -69,7 +69,7 @@ export async function POST(
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[clone] source date from DB:", formatDateToUTC(source.date), "→ target:", targetDate);
+      console.log("[clone] source date from DB:", source.date ? formatDateToUTC(source.date) : "(template)", "→ target:", targetDate);
     }
 
     const newSession = await prisma.workoutSession.create({
