@@ -107,7 +107,7 @@ export async function POST(
     return NextResponse.json({
       session: {
         id: newSession.id,
-        date: formatDateToUTC(newSession.date),
+        date: newSession.date ? formatDateToUTC(newSession.date) : targetDate,
       },
     });
   } catch (e) {

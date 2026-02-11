@@ -39,11 +39,13 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      sessions: sessions.map((s) => ({
-        id: s.id,
-        date: formatDateToUTC(s.date),
-        title: s.title,
-      })),
+      sessions: sessions
+        .filter((s): s is typeof s & { date: Date } => s.date != null)
+        .map((s) => ({
+          id: s.id,
+          date: formatDateToUTC(s.date),
+          title: s.title,
+        })),
     });
   } catch (e) {
     if ((e as Error).message === "UNAUTHORIZED") {

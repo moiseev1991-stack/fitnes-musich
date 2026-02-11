@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     });
 
     const data = sessions.map((s) => {
+      if (s.date == null) return null;
       const se = s.sessionExercises[0];
       if (!se) return null;
       const weights = se.sets

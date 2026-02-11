@@ -51,12 +51,14 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const list = sessions.map((s) => ({
-      id: s.id,
-      date: formatDateToUTC(s.date),
-      exerciseCount: s.sessionExercises.length,
-      preview: s.sessionExercises.slice(0, 3).map((se) => se.exercise.name),
-    }));
+    const list = sessions
+      .filter((s): s is typeof s & { date: Date } => s.date != null)
+      .map((s) => ({
+        id: s.id,
+        date: formatDateToUTC(s.date),
+        exerciseCount: s.sessionExercises.length,
+        preview: s.sessionExercises.slice(0, 3).map((se) => se.exercise.name),
+      }));
 
     return NextResponse.json({ sessions: list });
   } catch (e) {
